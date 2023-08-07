@@ -17,7 +17,7 @@ export async function signup(req, res) {
     const passwordHash = bcrypt.hashSync(password, 10);
 
     await db.query(
-      `INSERT INTO users (name, email, password)VALUES($1, $2, $3)`,
+      `INSERT INTO users (name, email, password) VALUES ($1, $2, $3)`,
       [name, email, passwordHash]
     );
 
@@ -42,18 +42,21 @@ export async function signin(req, res) {
       return res.status(401).send("E-mail não encontrado :(");
     }
 
-    const comparePassword = bcrypt.compare(password, user.rows[0].password);
-    if (comparePassword === false) {
+    const comparePassword = await bcrypt.compare(password, user.rows[0].password);
+    if (!comparePassword) {
       return res.status(401).send("Senha incorreta ");
     }
 
     const token = uuid();
 
     await db.query(
-      'INSERT INTO sessions ("userId", "token"), VALUES ($1, $2)',
+      'INSERT INTO sessions (userId, "token") VALUES ($1, $2)',
       [user.rows[0].id, token]
     );
 
     res.status(200).send(token);
-  } catch {}
+  } catch (err) {
+    res.status(500).send(err.message);
+    console.error(err);
+  }
 }
